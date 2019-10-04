@@ -1,0 +1,275 @@
+---
+title: "Tidyverse Problem Set"
+author: "MA615"
+date: "September 29, 2019"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+  options(tinytex.verbose = TRUE)
+  opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this problem set is to provide data contexts in which to exercise the capabilitiues of the tidyverse. While some questons require specific answers, other parts of the problems have been written to be purposely ambiguous, requiring you to think through the presentation details of your answer. 
+
+
+
+
+HOLD THE PRESSES!  
+As I was preparing to post these problems yesterday, I noticed that tidyr had been updata in the last few weeks. I was looking for more exercises on gather() and spread() -- which are always difficult to master.  And I found that they have been superceded!!  Why do I love working with R as the tidyversie is on a path of continuous improvement? Because the improvements come from developers who write things like this:
+
+
+_For some time, it’s been obvious that there is something fundamentally wrong with the design of spread() and gather(). Many people don’t find the names intuitive and find it hard to remember which direction corresponds to spreading and which to gathering. It also seems surprisingly hard to remember the arguments to these functions, meaning that many people (including me!) have to consult the documentation every time._  [Hadley Wickham, Pivot Vingette](https://cran.r-project.org/web/packages/tidyr/vignettes/pivot.html)
+
+
+So... before you do anymore tidyverse exercises,
+Read this [tidyr 1.0.0](https://www.tidyverse.org/articles/2019/09/tidyr-1-0-0/).
+
+Then go to the [tidyr cran page](https://cran.r-project.org/web/packages/tidyr/index.html) 
+and to the examples and exercies in the new vignettes.
+
+In your solutions to the problems below, if you need to use table reshaping functions from TidyR, be sure that you use pivot_longer(), and pivot_wider().
+
+
+
+### Problem 1
+
+Load the gapminder data from the gapminder package.
+
+How many continents are included in the data set?
+```{r}
+library(gapminder)
+unique(gapminder$continent)
+
+
+```
+How many countrys are included?  How many countries per continent?
+```{r}
+unique(gapminder$country)
+countries_per_continent<-gapminder%>%group_by(continent)%>%summarise(n_distinct(country))
+countries_per_continent
+```
+Using the gapminder data, produce a report showing the continents in the dataset, total population per continent, and GDP per capita.  Be sure that the table is properly labeled and suitable for inclusion in a printed report.
+```{r}
+popandgdp<-gapminder%>%group_by(continent)%>%summarise(sum(as.numeric(pop),na.rm = TRUE),sum(gdpPercap))
+popandgdp
+
+
+```
+Produce a well-labeled table that summarizes GDP per capita for the countries in each continent,  contrasting the years 1952 and 2007.
+```{r}
+gdppercap<-gapminder%>%group_by(continent)%>%summarise(sum(gdpPercap))
+gdppercap
+gdppercap1952and2007<-gapminder%>%filter(year==1952|year==2007)%>%group_by(continent)%>%summarise(sum(gdpPercap))
+
+gdppercap1952and2007
+
+gdppercap1952<-gapminder%>%filter(year==1952)%>%group_by(continent)%>%summarise(sum(gdpPercap))
+year<-rep(1952,5)
+gdppercap1952final<-cbind(gdppercap1952,year)
+
+gdppercap2007<-gapminder%>%filter(year==2007)%>%group_by(continent)%>%summarise(sum(gdpPercap))
+year<-rep(2007,5)
+gdppercap2007final<-cbind(gdppercap2007,year)
+contrast1952and2007<-rbind(gdppercap1952final,gdppercap2007final)
+colnames(contrast1952and2007)<-c("continent","gdppercapital","year")
+kable(contrast1952and2007)
+
+ggplot(data=contrast1952and2007)+geom_point(mapping = aes(x = continent, y = gdppercapital,color=year))
+
+```
+Product a plot that summarizes the same data as the table. There should be two plots per continent.
+```{r}
+library(ggplot2)
+ggplot(gapminder)+geom_point(mapping=aes(x=year,y=pop,color=continent))
+ggplot(gapminder)+geom_point(mapping =aes(x=year,y=gdpPercap,color=continent))
+
+```
+
+Which countries in the dataset have had periods of negative population growth?
+
+Illustrate your answer with a table or plot.
+```{r}
+
+
+
+
+
+```
+
+Which countries in the dataset have had the highest rate of growth in per capita GDP? Illustrate your answer with a table or plot.
+```{r}
+
+
+
+
+```
+
+\newpage
+
+### Problem 2
+
+The data for Problem 2 is the Fertility data in the AER package.  This data is from the 1980 US Census and is comprised of date on married women aged 21-35 with two or more children.  The data report the gender of each woman's first and second child, the woman's race, age, number of weeks worked in 1979, and whether the woman had more than two children.
+```{r}
+library(AER)
+data("Fertility")
+View(Fertility)
+```
+
+There are four possible gender combinations for the first two Children.  Product a plot the contracts the frequency of these four combinations. Are the frequencies different for women in their 20s and wemen who are older than 29?
+```{r}
+
+
+
+Fertility<-Fertility%>%unite(gender_combination, gender1, gender2)
+
+freoverall<-Fertility%>%group_by(gender_combination)%>%summarise(length(morekids),length(morekids)/length(Fertility$morekids))
+
+no20s<-filter(Fertility,age>=20 & age<=30)
+no20s<-length(no20s$morekids)
+fre20s<-Fertility%>%filter(age>=20 & age<=30)%>%group_by(gender_combination)%>%summarise(length(morekids),length(morekids)/no20s)
+age<-rep("20s",4)
+fre20s<-cbind(as.data.frame(fre20s),age)
+colnames(fre20s)<-c("gender_combination","count","percentage","age")
+
+no29s<-filter(Fertility,age>29)
+no29s<-length(no29s$morekids)
+fre29<-Fertility%>%filter(age>29)%>%group_by(gender_combination)%>%summarise(length(morekids),length(morekids)/no29s)
+age<-rep("29s",4)
+fre29<-cbind(as.data.frame(fre29),age)
+colnames(fre29)<-c("gender_combination","count","percentage","age")
+
+
+contrast2029table<-cbind(fre20s,fre29)
+kable(contrast2029table)
+
+contrast2029plot<-rbind(fre20s,fre29)
+
+ggplot(data=contrast2029plot)+geom_point(mapping = aes(x = gender_combination, y = percentage,color=age))
+
+
+```
+Produce a plot that contrasts the frequency of having more than two children by race and ethnicity.  
+```{r}
+
+
+
+```
+
+### Problem 3
+
+Use the mtcars and mpg datasets.  
+How many times does the letter "e" occur in mtcars rownames?
+```{r}
+library(tidyverse)
+View(mtcars)
+View(mpg)
+mtcars_rownames<-row.names(mtcars)
+no_e<-sum(str_count(mtcars_rownames,pattern = "e"))
+no_e
+```
+How many cars in mtcars have the brand Merc?
+```{r}
+no_merc<-sum(str_count(mtcars_rownames,pattern = "Merc"))
+no_merc
+```
+How many cars in mpg have the brand("manufacturer" in mpg) Merc?
+```{r}
+no_manu<-sum(str_count(mpg$manufacturer,pattern="mercury"))
+no_manu
+```
+Contrast the mileage data for Merc cars as reported in mtcars and mpg.  Use tables, plots, and a short explaination.
+```{r}
+library(stringr)
+mpgmile<-mpg%>%filter(mpg$manufacturer=="mercury")%>%mutate((cty+hwy)/2)
+mpgmile<-mpgmile[,c(1,12)]
+colnames(mpgmile)<-c("Brand","Mileage")
+
+Brand<-rownames((mtcars))
+mtcars<-cbind(mtcars,Brand)
+mtcarsmile<-mtcars[c(8:14),]
+mtcarsmilee<-data.frame(mtcarsmile$Brand,mtcarsmile$mpg)
+colnames(mtcarsmilee)<-c("Brand","Mileage")
+
+contra<-rbind(mpgmile,mtcarsmilee)
+
+```
+
+### Problem 4
+
+Install the babynames package.
+
+Draw a sample of 500,000 rows from the babynames data
+```{r}
+library(babynames)
+library(dplyr)
+babynames5000<-sample_n(babynames,500000)
+```
+Produce a tabble that displays the five most popular boy names and girl names
+in the years 1880,1920, 1960, 2000.
+```{r}
+babynames1880<-filter(babynames,year==1880)
+babynames1880count<-babynames1880%>%group_by(name)%>%summarise(sum(n))
+babynames1880count<-babynames1880count[order(-babynames1880count$`sum(n)`),]
+babynames1880top5<-babynames1880count[c(1:5),]
+year<-rep(1880,5)
+baby1880<-cbind(year,babynames1880top5)
+
+babynames1920<-filter(babynames,year==1920)
+babynames1920count<-babynames1920%>%group_by(name)%>%summarise(sum(n))
+babynames1920count<-babynames1920count[order(-babynames1920count$`sum(n)`),]
+babynames1920top5<-babynames1920count[c(1:5),]
+year<-rep(1920,5)
+baby1920<-cbind(year,babynames1920top5)
+
+babynames1960<-filter(babynames,year==1960)
+babynames1960count<-babynames1960%>%group_by(name)%>%summarise(sum(n))
+babynames1960count<-babynames1960count[order(-babynames1960count$`sum(n)`),]
+babynames1960top5<-babynames1960count[c(1:5),]
+year<-rep(1960,5)
+baby1960<-cbind(year,babynames1960top5)
+
+babynames2000<-filter(babynames,year==2000)
+babynames2000count<-babynames2000%>%group_by(name)%>%summarise(sum(n))
+babynames2000count<-babynames2000count[order(-babynames2000count$`sum(n)`),]
+babynames2000top5<-babynames2000count[c(1:5),]
+year<-rep(2000,5)
+baby2000<-cbind(year,babynames2000top5)
+
+babynames_top5<-rbind(baby1880,baby1920,baby1960,baby2000)
+
+
+```
+
+
+What names overlap boys and girls?
+```{r}
+boys<-filter(babynames,sex=='M')
+girls<-filter(babynames,sex=='F')
+overlap<-intersect(boys$name,girls$name)
+#overlap
+```
+
+What names were used in the 19th century but have not been used in the 21sth century?
+```{r}
+name19th<-filter(babynames,year>=1801 & year<=1900)
+name21th<-filter(babynames,year>=1990 & year<=1999)
+notin21st<-setdiff(name19th$name,name21th$name)
+#notin21st
+```
+
+Produce a chart that shows the relative frequency of the names "Donald", "Hilary", "Hillary", "Joe", "Barrack",  over the years 1880 through 2017.
+```{r}
+babynames1880and2017<-filter(babynames,year>=1880 & year<=2017)
+n<-length(babynames$name)
+babynames1880and2017<-filter(babynames1880and2017,name=="Donald"|name=="Hilary"|name=="Hillary"|name== "Joe"|name=="Barrack")
+final<-babynames1880and2017%>%group_by(name)%>%summarise(sum(n)/length(babynames$name))
+final
+
+```
+
